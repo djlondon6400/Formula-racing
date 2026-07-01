@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
-<title>Open Wheel Racer — 3D Mobile (Enhanced)</title>
+<title>Open Wheel Racer — 3D Mobile (Ultra Graphics)</title>
 <style>
-  html,body{height:100%;margin:0;background:#09090b;color:#fff;font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
+  html,body{height:100%;margin:0;background:#06060a;color:#fff;font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased}
   #game-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-  canvas{display:block;background:linear-gradient(180deg,#081018 0%, #0b0b12 50%, #071018 100%);touch-action:none}
+  canvas{display:block;touch-action:none}
   .ui{position:fixed;left:0;right:0;bottom:10px;display:flex;justify-content:space-between;padding:0 20px;pointer-events:none}
-  .btn{width:86px;height:86px;border-radius:44px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:28px;pointer-events:auto;color:#fff;user-select:none;backdrop-filter:blur(6px)}
+  .btn{width:86px;height:86px;border-radius:44px;background:linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02));display:flex;align-items:center;justify-content:center;font-size:28px;pointer-events:auto;color:#fff;user-select:none;backdrop-filter:blur(6px)}
   .center-ui{position:fixed;left:50%;transform:translateX(-50%);top:10px;background:rgba(0,0,0,0.45);padding:8px 12px;border-radius:8px;font-weight:600}
   #finish{position:fixed;left:50%;top:40%;transform:translateX(-50%);font-size:48px;display:none;padding:12px 20px;border-radius:8px;background:linear-gradient(90deg,#ffb703,#fb8500);color:#111}
   .hud{position:fixed;right:12px;top:70px;background:rgba(0,0,0,0.45);padding:8px 12px;border-radius:8px;text-align:right}
@@ -28,15 +28,15 @@
   <div id=right class=btn>&rarr;</div>
 </div>
 <div id=finish>FINISH!</div>
-<div class=credits>Enhanced track, pit lane, and car art — auto-generated improvements</div>
+<div class=credits>Ultra graphics, detailed car art, particles — auto-upgrade</div>
 <script>
-// Responsive canvas with DPR
+// Responsive canvas with DPR and size
 const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d', {alpha:false});
 function resize(){
   const DPR = Math.max(1, window.devicePixelRatio || 1);
-  const w = Math.min(window.innerWidth, 1100);
-  const h = Math.min(window.innerHeight, 1400);
+  const w = Math.min(window.innerWidth, 1300);
+  const h = Math.min(window.innerHeight, 1500);
   canvas.style.width = w + 'px';
   canvas.style.height = h + 'px';
   canvas.width = Math.floor(w * DPR);
@@ -46,13 +46,13 @@ function resize(){
 window.addEventListener('resize', resize);
 resize();
 
-// Game state
+// State
 let keys = {left:0,right:0};
 let touchLeft=false,touchRight=false;
-let tilt=0; // -1..1
-let playerX = 0; // -1..1, relative to center of road
-let speed = 0; // forward speed (m/s style)
-let distance = 0; // distance travelled in "meters"
+let tilt=0;
+let playerX = 0;
+let speed = 0;
+let distance = 0;
 let laps = 0;
 const maxLaps = 5;
 const status = document.getElementById('status');
@@ -60,7 +60,7 @@ const finishEl = document.getElementById('finish');
 const hud = document.getElementById('hud');
 let fuel = 100, damage = 0;
 
-// Controls: buttons and touch zones
+// Controls
 const leftBtn = document.getElementById('left');
 const rightBtn = document.getElementById('right');
 leftBtn.addEventListener('pointerdown', e=>{e.preventDefault();touchLeft=true});
@@ -70,270 +70,207 @@ rightBtn.addEventListener('pointerdown', e=>{e.preventDefault();touchRight=true}
 rightBtn.addEventListener('pointerup', e=>{touchRight=false});
 rightBtn.addEventListener('pointercancel', e=>{touchRight=false});
 
-// Full-canvas touch steering for mobile
 let activePointer = null;
-canvas.addEventListener('pointerdown', e=>{
-  activePointer = e.pointerId; canvas.setPointerCapture(activePointer);
-  handlePointer(e);
-});
+canvas.addEventListener('pointerdown', e=>{ activePointer=e.pointerId; canvas.setPointerCapture(activePointer); handlePointer(e); });
 canvas.addEventListener('pointermove', e=>{ if(e.pointerId===activePointer) handlePointer(e); });
-canvas.addEventListener('pointerup', e=>{ if(e.pointerId===activePointer){releasePointer(); activePointer=null;} });
-canvas.addEventListener('pointercancel', e=>{ if(e.pointerId===activePointer){releasePointer(); activePointer=null;} });
-function handlePointer(e){
-  const rect = canvas.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width; // 0..1
-  // left half steers left, right half steers right, distance from center determines strength
-  if(x < 0.45){ touchLeft = true; touchRight = false; }
-  else if(x > 0.55){ touchRight = true; touchLeft = false; }
-  else { touchLeft = touchRight = false; }
-}
-function releasePointer(){ touchLeft = touchRight = false; }
+canvas.addEventListener('pointerup', e=>{ if(e.pointerId===activePointer){ releasePointer(); activePointer=null; } });
+canvas.addEventListener('pointercancel', e=>{ if(e.pointerId===activePointer){ releasePointer(); activePointer=null; } });
+function handlePointer(e){ const rect=canvas.getBoundingClientRect(); const x=(e.clientX-rect.left)/rect.width; if(x<0.45){ touchLeft=true; touchRight=false; } else if(x>0.55){ touchRight=true; touchLeft=false; } else { touchLeft=touchRight=false; } }
+function releasePointer(){ touchLeft=touchRight=false; }
 
-// Device tilt support (optional)
 if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function'){
-  window.addEventListener('click', ()=>{
-    DeviceOrientationEvent.requestPermission && DeviceOrientationEvent.requestPermission().catch(()=>{});
-  }, {once:true});
+  window.addEventListener('click', ()=>{ DeviceOrientationEvent.requestPermission && DeviceOrientationEvent.requestPermission().catch(()=>{}); }, {once:true});
 }
-window.addEventListener('deviceorientation', e=>{
-  if(e.gamma!=null){ // gamma is left-right tilt in degrees -90..90
-    tilt = Math.max(-1, Math.min(1, e.gamma / 25));
-  }
-});
+window.addEventListener('deviceorientation', e=>{ if(e.gamma!=null){ tilt = Math.max(-1, Math.min(1, e.gamma/25)); } });
 
-// Track parameters
-const road = {length: 4200, // meters per lap (tighter lap)
-  lanes:2, width: 480, // visual width at camera
-  camZ: 0, camHeight: 120}
+// Track & pit
+const road = {length:4200, lanes:2, width:520, camZ:0, camHeight:120};
+function trackCurveAt(d){ const t=(d%road.length)/road.length; return Math.sin(t*Math.PI*2)*0.8 + Math.sin(t*Math.PI*5)*0.18 + Math.cos(t*Math.PI*3)*0.08; }
+const pit = {entryStart:road.length*0.72, entryEnd:road.length*0.76, length:260, boxes:6};
 
-// A simple track layout with straights, corners and a pit lane region
-// For visual variety create sine-based curvature over distance
-function trackCurveAt(d){
-  // normalized 0..1 around lap
-  const t = (d % road.length) / road.length;
-  // combine low-frequency and high-frequency curves
-  return Math.sin(t * Math.PI * 2) * 0.7 + Math.sin(t * Math.PI * 6) * 0.12;
-}
+// Parallax background objects
+const bgObjects = [];
+for(let i=0;i<40;i++){ bgObjects.push({x: Math.random()*2000-1000, y: Math.random()*0.6+0.1, size: 20+Math.random()*60, color: (Math.random()>0.5?'#2b2b2b':'#143')}); }
 
-// pit lane layout
-const pit = {entryStart: road.length * 0.72, entryEnd: road.length * 0.76, length: 240, boxes:6};
+// Particles for speed lines
+const particles = [];
+function spawnParticle(x,y,vx,vy,life,color){ particles.push({x,y,vx,vy,life,maxLife:life,color}); }
 
-// Utility: convert virtual meters to screen perspective
-function worldToScreenX(x, z, perspectiveScale){
-  const cx = (canvas.width/ (window.devicePixelRatio||1))/2;
-  return cx + x * perspectiveScale * (canvas.width/(window.devicePixelRatio||1))/2;
-}
+// helpers
+function drawGradientRect(x1,y1,x2,y2,c1,c2){ const g=ctx.createLinearGradient(0,y1,0,y2); g.addColorStop(0,c1); g.addColorStop(1,c2); ctx.fillStyle=g; ctx.fillRect(x1,y1,x2-x1,y2-y1); }
 
-function drawGradientRect(x1,y1,x2,y2, c1, c2){
-  const g = ctx.createLinearGradient(0,y1,0,y2);
-  g.addColorStop(0,c1); g.addColorStop(1,c2);
-  ctx.fillStyle = g; ctx.fillRect(x1,y1,x2-x1,y2-y1);
-}
-
-// draw improved road with barriers, textured asphalt and pit lane
+// Road drawing (enhanced)
 function drawRoad(){
-  const viewDepth = 140; // number of segments to draw
-  const segLength = 16; // meters per segment
-  const roadWidth = road.width;
+  const viewDepth=160; const segLength=14; const roadWidth=road.width;
   for(let i=0;i<viewDepth;i++){
-    const z1 = (i * segLength) + (distance % segLength);
-    const z2 = ((i+1) * segLength) + (distance % segLength);
-    const perspective1 = 300 / (z1 + 300);
-    const perspective2 = 300 / (z2 + 300);
-    const laneMarkW = 10;
-    const roadW1 = roadWidth * perspective1;
-    const roadW2 = roadWidth * perspective2;
-    // curve offset from track
-    const curve1 = trackCurveAt(distance + z1) * 140;
-    const curve2 = trackCurveAt(distance + z2) * 140;
-    const cx = (canvas.width/ (window.devicePixelRatio||1))/2;
-    const left1 = cx - roadW1/2 + curve1 * perspective1 + (playerX*140 * perspective1);
-    const right1 = cx + roadW1/2 + curve1 * perspective1 + (playerX*140 * perspective1);
-    const left2 = cx - roadW2/2 + curve2 * perspective2 + (playerX*140 * perspective2);
-    const right2 = cx + roadW2/2 + curve2 * perspective2 + (playerX*140 * perspective2);
-    const y1 = (canvas.height/ (window.devicePixelRatio||1)) - i*6;
-    const y2 = (canvas.height/ (window.devicePixelRatio||1)) - (i+1)*6;
+    const z1=(i*segLength)+(distance%segLength);
+    const z2=((i+1)*segLength)+(distance%segLength);
+    const p1=350/(z1+350); const p2=350/(z2+350);
+    const rw1=roadWidth*p1; const rw2=roadWidth*p2;
+    const curve1=trackCurveAt(distance+z1)*160; const curve2=trackCurveAt(distance+z2)*160;
+    const cx=(canvas.width/(window.devicePixelRatio||1))/2;
+    const left1=cx-rw1/2+curve1*p1 + (playerX*150*p1);
+    const right1=cx+rw1/2+curve1*p1 + (playerX*150*p1);
+    const left2=cx-rw2/2+curve2*p2 + (playerX*150*p2);
+    const right2=cx+rw2/2+curve2*p2 + (playerX*150*p2);
+    const y1=(canvas.height/(window.devicePixelRatio||1)) - i*6;
+    const y2=(canvas.height/(window.devicePixelRatio||1)) - (i+1)*6;
 
-    // off-road dirt/grass with subtle texture
-    ctx.fillStyle = (i%2? '#0b3a1a':'#0d3f2a');
+    // scenery
+    ctx.fillStyle = i%2? '#071a0e':'#07210f';
     ctx.beginPath(); ctx.moveTo(0,y2); ctx.lineTo(left2,y2); ctx.lineTo(left1,y1); ctx.lineTo(0,y1); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(right2,y2); ctx.lineTo(canvas.width/ (window.devicePixelRatio||1),y2); ctx.lineTo(canvas.width/ (window.devicePixelRatio||1),y1); ctx.lineTo(right1,y1); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(right2,y2); ctx.lineTo(canvas.width/(window.devicePixelRatio||1),y2); ctx.lineTo(canvas.width/(window.devicePixelRatio||1),y1); ctx.lineTo(right1,y1); ctx.closePath(); ctx.fill();
 
     // barriers
-    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.moveTo(left2 - 12,y2); ctx.lineTo(left2,y2); ctx.lineTo(left1,y1); ctx.lineTo(left1 - 12,y1); ctx.closePath(); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(right2 + 12,y2); ctx.lineTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(right1 + 12,y1); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#1a1a1a'; ctx.beginPath(); ctx.moveTo(left2-14,y2); ctx.lineTo(left2,y2); ctx.lineTo(left1,y1); ctx.lineTo(left1-14,y1); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(right2+14,y2); ctx.lineTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(right1+14,y1); ctx.closePath(); ctx.fill();
 
-    // road (asphalt) with subtle gradient to imply texture
-    const grad = ctx.createLinearGradient(0,y2,0,y1);
-    grad.addColorStop(0,'#3b3b3b'); grad.addColorStop(1,'#2b2b2b');
-    ctx.fillStyle = grad; ctx.beginPath(); ctx.moveTo(left2,y2); ctx.lineTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(left1,y1); ctx.closePath(); ctx.fill();
+    // asphalt with subtle noise gradient
+    const g = ctx.createLinearGradient(0,y2,0,y1); g.addColorStop(0,'#424242'); g.addColorStop(1,'#2b2b2b'); ctx.fillStyle=g;
+    ctx.beginPath(); ctx.moveTo(left2,y2); ctx.lineTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(left1,y1); ctx.closePath(); ctx.fill();
 
-    // worn center line (dashed) and lane marks
-    if(i%4===0){
-      ctx.fillStyle = '#f8f4e3';
-      const cx1 = (left1+right1)/2; const cx2 = (left2+right2)/2;
-      const w1 = Math.max(2, laneMarkW * perspective1*0.85);
-      const w2 = Math.max(2, laneMarkW * perspective2*0.85);
-      ctx.beginPath(); ctx.moveTo(cx2-w2/2,y2); ctx.lineTo(cx2+w2/2,y2); ctx.lineTo(cx1+w1/2,y1); ctx.lineTo(cx1-w1/2,y1); ctx.closePath(); ctx.fill();
+    // center dashed
+    if(i%4===0){ ctx.fillStyle='rgba(250,245,230,0.9)'; const cx1=(left1+right1)/2, cx2=(left2+right2)/2; const w1=Math.max(2, 12*p1), w2=Math.max(2, 12*p2); ctx.beginPath(); ctx.moveTo(cx2-w2/2,y2); ctx.lineTo(cx2+w2/2,y2); ctx.lineTo(cx1+w1/2,y1); ctx.lineTo(cx1-w1/2,y1); ctx.closePath(); ctx.fill(); }
+
+    // pit lane region
+    const segPos=(distance+z1)%road.length;
+    if(segPos > pit.entryStart-180 && segPos < pit.entryEnd + pit.length){ const pitOffset=95*p1; ctx.fillStyle='rgba(60,60,60,0.9)'; ctx.beginPath(); ctx.moveTo(right2+4,y2); ctx.lineTo(right2+4+pitOffset,y2); ctx.lineTo(right1+4+pitOffset,y1); ctx.lineTo(right1+4,y1); ctx.closePath(); ctx.fill();
+      const boxW=38*p1, boxH=16; for(let b=0;b<pit.boxes;b++){ const by=y2 - b*22; ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=1; ctx.beginPath(); ctx.rect(right2 + 12, by - boxH, boxW, boxH); ctx.stroke(); }
+      ctx.fillStyle='rgba(255,200,50,0.06)'; ctx.fillRect(right2+4, y2-24, pitOffset, 48);
     }
 
-    // pit lane on the right: draw only when this segment is near the pit entry area
-    const segPos = (distance + z1) % road.length;
-    if(segPos > pit.entryStart - 150 && segPos < pit.entryEnd + pit.length){
-      // pit lane region parallel to right side of road
-      const pitOffset = 80 * perspective1;
-      ctx.fillStyle = '#444a';
-      ctx.beginPath(); ctx.moveTo(right2 + 2,y2); ctx.lineTo(right2 + 2 + pitOffset,y2); ctx.lineTo(right1 + 2 + pitOffset,y1); ctx.lineTo(right1 + 2,y1); ctx.closePath(); ctx.fill();
-      // pit boxes markings
-      const boxW = 26 * perspective1; const boxH = 18;
-      for(let b=0;b<pit.boxes;b++){
-        const by = y2 - b*20;
-        ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.rect(right2 + 8, by - boxH, boxW, boxH); ctx.stroke();
-      }
-      // pit entry/exit stripes
-      ctx.fillStyle = 'rgba(255,200,50,0.08)'; ctx.fillRect(right2 + 2, y2-20, pitOffset, 40);
-    }
+    // kerbs
+    ctx.save(); ctx.beginPath(); ctx.moveTo(left2,y2); ctx.lineTo(left1,y1); ctx.lineTo(left1+18,y1); ctx.lineTo(left2+18,y2); ctx.closePath(); ctx.clip(); for(let k=0;k<8;k++){ ctx.fillStyle=(k%2? '#e53935':'#fff'); const kx1 = left2 + (k/8)*(left1-left2); const kx2 = left2 + ((k+1)/8)*(left1-left2); ctx.fillRect(kx1, y2, kx2-kx1, y1-y2); } ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.moveTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(right1-18,y1); ctx.lineTo(right2-18,y2); ctx.closePath(); ctx.clip(); for(let k=0;k<8;k++){ ctx.fillStyle=(k%2? '#e53935':'#fff'); const kx1 = right2 + (k/8)*(right1-right2); const kx2 = right2 + ((k+1)/8)*(right1-right2); ctx.fillRect(kx1, y2, kx2-kx1, y1-y2); } ctx.restore();
 
-    // rumble / kerb strips with red/white pattern
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(left2,y2); ctx.lineTo(left1,y1); ctx.lineTo(left1+14,y1); ctx.lineTo(left2+14,y2); ctx.closePath(); ctx.clip();
-    const kerbCount = 6;
-    for(let k=0;k<kerbCount;k++){
-      ctx.fillStyle = (k%2? '#e53935':'#fff');
-      const kx1 = left2 + (k/kerbCount) * (left1 - left2);
-      const kx2 = left2 + ((k+1)/kerbCount) * (left1 - left2);
-      ctx.fillRect(kx1, y2, kx2 - kx1, y1 - y2);
-    }
-    ctx.restore();
-
-    ctx.save();
-    ctx.beginPath(); ctx.moveTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(right1-14,y1); ctx.lineTo(right2-14,y2); ctx.closePath(); ctx.clip();
-    for(let k=0;k<kerbCount;k++){
-      ctx.fillStyle = (k%2? '#e53935':'#fff');
-      const kx1 = right2 + (k/kerbCount) * (right1 - right2);
-      const kx2 = right2 + ((k+1)/kerbCount) * (right1 - right2);
-      ctx.fillRect(kx1, y2, kx2 - kx1, y1 - y2);
-    }
-    ctx.restore();
-
-    // small skid texture on road occasionally
-    if(i%12===0){ ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.fillRect((left2+right2)/2 - 40, y2 - 6, 80, 4); }
+    // skid marks
+    if(i%10===0){ ctx.fillStyle='rgba(0,0,0,0.06)'; ctx.fillRect((left2+right2)/2 - 52, y2 - 6, 104, 5); }
   }
 }
 
-// improved car drawing with gradients and wings
-function drawCar(xPos, yPos, color, scale=1, angle=0){
-  const carW = 46 * scale;
-  const carH = 76 * scale;
-  ctx.save(); ctx.translate(xPos,yPos); ctx.rotate(angle);
+// Advanced car drawing: glossy, decals, number, wings, spokes
+function drawCarDetailed(x,y,color,scale=1,angle=0, number=7){
+  const carW = 54*scale, carH = 92*scale;
+  ctx.save(); ctx.translate(x,y); ctx.rotate(angle);
+  // motion glow under car
+  const glow = ctx.createRadialGradient(0, carH*0.28, 10, 0, carH*0.28, carH*0.9);
+  glow.addColorStop(0, 'rgba(210,80,80,0.18)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow; ctx.fillRect(-carW, carH*0.1, carW*2, carH*0.9);
+
   // shadow
-  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(-carW/2 + 6, carH/2 - 6, carW - 8, 8);
-  // body gradient
-  const g = ctx.createLinearGradient(0,-carH/2,0,carH/2);
-  g.addColorStop(0, shadeColor(color, 12)); g.addColorStop(1, shadeColor(color, -12));
-  ctx.fillStyle = g; roundRect(ctx, -carW/2, -carH/2, carW, carH, 6*scale); ctx.fill();
-  // cockpit glass
-  ctx.fillStyle = 'rgba(30,40,50,0.9)'; roundRect(ctx, -carW/6, -carH/2 + 8, carW/3, carH/3, 3*scale); ctx.fill();
-  // front wing
-  ctx.fillStyle = shadeColor(color, -30); ctx.fillRect(-carW/2 - 8, -6, 8, 12);
-  ctx.fillRect(carW/2, -6, 8, 12);
-  // rear wing
-  ctx.fillStyle = shadeColor(color, -24); ctx.fillRect(-carW/4, carH/4, carW/2, 6*scale);
-  // wheels
-  drawWheel(ctx, -carW/2 + 6, -carH/6, 10*scale);
-  drawWheel(ctx, carW/2 - 6, -carH/6, 10*scale);
-  drawWheel(ctx, -carW/2 + 6, carH/6, 10*scale);
-  drawWheel(ctx, carW/2 - 6, carH/6, 10*scale);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.beginPath(); ctx.ellipse(0, carH*0.5, carW*0.6, carW*0.22, 0, 0, Math.PI*2); ctx.fill();
+
+  // body base with gradient for sheen
+  const g = ctx.createLinearGradient(0, -carH/2, 0, carH/2);
+  g.addColorStop(0, shadeColor(color, 28)); g.addColorStop(0.5, color); g.addColorStop(1, shadeColor(color, -20));
+  ctx.fillStyle = g; roundRect(ctx, -carW/2, -carH/2, carW, carH, 10*scale); ctx.fill();
+
+  // stripe decal
+  ctx.fillStyle = shadeColor('#ffffff', -30); ctx.fillRect(-carW*0.18, -carH/2 + 6, carW*0.36, carH*0.28);
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.fillRect(-carW*0.18, -carH/2 + 6 + 6, carW*0.36, 6);
+
+  // racing number
+  ctx.font = `${22*scale}px  Arial`; ctx.fillStyle = 'rgba(10,10,10,0.95)'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(number, 0, -carH*0.06);
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.fillText(number, 1, -carH*0.06 + 1);
+
+  // cockpit glass with reflection
+  const glassG = ctx.createLinearGradient(0, -carH/2 + 6, 0, -carH/2 + carH*0.3);
+  glassG.addColorStop(0, 'rgba(100,135,155,0.98)'); glassG.addColorStop(1, 'rgba(30,40,50,0.9)');
+  roundRect(ctx, -carW*0.2, -carH/2 + 10, carW*0.4, carH*0.28, 4*scale); ctx.fillStyle = glassG; ctx.fill();
+  // subtle top highlight
+  ctx.fillStyle = 'rgba(255,255,255,0.06)'; roundRect(ctx, -carW/2+6, -carH/2+4, carW-12, 18, 6*scale); ctx.fill();
+
+  // front/rear wings
+  ctx.fillStyle = shadeColor(color, -36); ctx.fillRect(-carW*0.58, -6, 8*scale, 12*scale); ctx.fillRect(carW*0.5, -6, 8*scale, 12*scale);
+  ctx.fillStyle = shadeColor(color, -18); ctx.fillRect(-carW*0.28, carH*0.32, carW*0.56, 8*scale);
+
+  // wheels with spokes
+  drawSpokedWheel(-carW/2 + 10, -carH/6, 12*scale);
+  drawSpokedWheel(carW/2 - 10, -carH/6, 12*scale);
+  drawSpokedWheel(-carW/2 + 10, carH/6, 12*scale);
+  drawSpokedWheel(carW/2 - 10, carH/6, 12*scale);
+
   ctx.restore();
 }
+function drawSpokedWheel(x,y,r){ ctx.save(); ctx.translate(x,y); // tire
+  ctx.fillStyle='#020202'; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+  // rim
+  ctx.fillStyle='#252525'; ctx.beginPath(); ctx.arc(0,0,r*0.5,0,Math.PI*2); ctx.fill();
+  // spokes
+  ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=1; for(let s=0;s<6;s++){ ctx.beginPath(); ctx.moveTo(0,0); const a=s*(Math.PI*2/6); ctx.lineTo(Math.cos(a)*r*0.5, Math.sin(a)*r*0.5); ctx.stroke(); }
+  ctx.restore(); }
 
-function drawWheel(ctx, x,y,r){ ctx.save(); ctx.translate(x,y); ctx.fillStyle='#0b0b0b'; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.arc(0,0,r*0.45,0,Math.PI*2); ctx.fill(); ctx.restore(); }
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
 
-function roundRect(ctx, x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+// Opponents
+const opponents = [ {offset:-70,color:'#0d47a1',num:3}, {offset:50,color:'#ffb300',num:12}, {offset:10,color:'#2e7d32',num:21} ];
 
-// simplistic opponents with nicer designs
-const opponents = [ {offset: -70, color:'#0d47a1'}, {offset: 50, color:'#ffb300'}, {offset: 10, color:'#2e7d32'} ];
+// Motion blur buffer (draw translucent rect each frame)
 
-// Game loop
+// Main loop
 let last = performance.now();
 function loop(now){
-  const dt = Math.min(50, now - last) / 1000; last = now;
-  // input
-  let steer = 0;
-  if(touchLeft) steer -= 1; if(touchRight) steer += 1;
-  steer += tilt; // tilt adds fractional steer
-  // smooth playerX movement with inertia and drift
-  const turnSpeed = 2.4; // how fast you move left/right
-  playerX += steer * turnSpeed * dt;
-  // add slight recovery to center
-  playerX += -playerX * 0.6 * dt;
-  playerX = Math.max(-1.4, Math.min(1.4, playerX));
+  const dt = Math.min(50, now - last)/1000; last = now;
+  // input -> steer
+  let steer = 0; if(touchLeft) steer -=1; if(touchRight) steer +=1; steer += tilt;
+  // lateral movement with inertia
+  const turnSpeed = 2.6; playerX += steer * turnSpeed * dt; playerX += -playerX * 0.6 * dt; playerX = Math.max(-1.6, Math.min(1.6, playerX));
+  // speed
+  const targetSpeed = 165 + Math.sin(distance/300)*12; speed += (targetSpeed - speed)*0.9*dt - (Math.abs(playerX)*8*dt);
+  if(speed < 24) speed = 24; distance += speed * dt;
+  // fuel/damage
+  fuel = Math.max(0, fuel - speed*0.0006*dt); if(Math.abs(playerX) > 1.3) damage = Math.min(100, damage + 8*dt);
+  // laps
+  const newLaps = Math.floor(distance/road.length); if(newLaps>laps) laps = Math.min(maxLaps,newLaps);
 
-  // speed control auto with slight variation
-  const targetSpeed = 148 + Math.sin(distance/400)*8; // faster
-  speed += (targetSpeed - speed) * 0.8 * dt - (Math.abs(playerX) * 6 * dt);
-  if(speed < 20) speed = 20;
-  distance += speed * dt;
+  // clear with motion blur: draw slight translucent rectangle to create trailing
+  ctx.fillStyle = 'rgba(3,6,10,0.18)'; ctx.fillRect(0,0,canvas.width/(window.devicePixelRatio||1), canvas.height/(window.devicePixelRatio||1));
 
-  // fuel and damage simple simulation
-  fuel = Math.max(0, fuel - speed * 0.001 * dt);
-  if(Math.abs(playerX) > 1.2) damage = Math.min(100, damage + 6*dt);
+  // draw sky gradient
+  drawGradientRect(0,0,canvas.width/(window.devicePixelRatio||1), canvas.height/(window.devicePixelRatio||1)/2, '#061026', '#071521');
 
-  // lap handling
-  const lapMeters = road.length;
-  const newLaps = Math.floor(distance / lapMeters);
-  if(newLaps > laps){ laps = Math.min(maxLaps, newLaps); }
+  // parallax bg objects
+  const centerX = (canvas.width/(window.devicePixelRatio||1))/2;
+  for(let i=0;i<bgObjects.length;i++){ const b=bgObjects[i]; const px = centerX + (b.x - trackCurveAt(distance)*80) * (0.25 + b.y*0.5) + Math.sin((distance/600)+i)*20; const py = (canvas.height/(window.devicePixelRatio||1))*b.y; ctx.fillStyle = b.color; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.ellipse(px, py, b.size*(0.8 - b.y*0.6), b.size*(0.3 - b.y*0.15), 0, 0, Math.PI*2); ctx.fill(); ctx.globalAlpha = 1; }
 
-  // render
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  // sky gradient
-  drawGradientRect(0,0,canvas.width/(window.devicePixelRatio||1), canvas.height/(window.devicePixelRatio||1)/2, '#071025','#0b1b2b');
   drawRoad();
 
-  // draw opponents
-  for(const o of opponents){
-    const rel = (o.offset + 800) - (distance % 1000);
-    const z = 200 + (rel%1000);
-    const p = 300 / (z + 300);
-    const screenX = worldToScreenX((o.offset + playerX*30)/100, z, p);
-    const screenY = (canvas.height/ (window.devicePixelRatio||1)) - p * 620;
-    if(screenY > 40 && screenY < canvas.height){ drawCar(screenX, screenY, o.color, p*1.1, (playerX*0.18)); }
-  }
+  // update and draw particles (speed lines)
+  if(speed > 80){ for(let i=0;i< Math.min(8, Math.floor((speed-80)/20)); i++){ const sx = centerX + (Math.random()-0.5)*180; const sy = (canvas.height/(window.devicePixelRatio||1)) - 120 + (Math.random()-0.5)*30; spawnParticle(sx, sy, (Math.random()-0.5)*-80, -50 - Math.random()*120, 0.6 + Math.random()*0.6, 'rgba(255,255,255,0.06)'); } }
+  for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; p.x += p.vx*dt; p.y += p.vy*dt; p.life -= dt; ctx.strokeStyle = p.color; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx*0.02, p.y - p.vy*0.02); ctx.stroke(); if(p.life<=0) particles.splice(i,1); }
 
-  // draw player car near bottom
-  const playerScreenX = (canvas.width/ (window.devicePixelRatio||1))/2 + playerX * (canvas.width/(window.devicePixelRatio||1))/3.4;
-  const playerScreenY = (canvas.height/ (window.devicePixelRatio||1)) - 88;
-  drawCar(playerScreenX, playerScreenY, '#d32f2f', 1.02, -playerX*0.42);
+  // draw opponents
+  for(const o of opponents){ const rel = (o.offset+900) - (distance%1000); const z = 220 + (rel%1000); const p = 300/(z+300); const sx = worldToScreenX((o.offset + playerX*30)/100, z, p); const sy = (canvas.height/(window.devicePixelRatio||1)) - p*640; if(sy>40 && sy<canvas.height){ drawCarDetailed(sx, sy, o.color, p*1.05, (playerX*0.16), o.num); } }
+
+  // player
+  const playerScreenX = (canvas.width/(window.devicePixelRatio||1))/2 + playerX * (canvas.width/(window.devicePixelRatio||1))/3.8;
+  const playerScreenY = (canvas.height/(window.devicePixelRatio||1)) - 96;
+  drawCarDetailed(playerScreenX, playerScreenY, '#e53935', 1.06, -playerX*0.46, 88);
 
   // HUD
   status.textContent = `Lap: ${Math.min(laps,maxLaps)} / ${maxLaps}   Speed: ${Math.round(speed)} `;
   hud.textContent = `Fuel: ${Math.round(fuel)}%   Damage: ${Math.round(damage)}%`;
-  if(laps >= maxLaps){ finishEl.style.display='block'; }
-  else finishEl.style.display='none';
+  if(laps >= maxLaps){ finishEl.style.display='block'; } else finishEl.style.display='none';
 
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
 
-// Keyboard support for desktop
+// Keyboard
 window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft') keys.left=1; if(e.key==='ArrowRight') keys.right=1; });
 window.addEventListener('keyup', e=>{ if(e.key==='ArrowLeft') keys.left=0; if(e.key==='ArrowRight') keys.right=0; });
-// map keys to touch variables for consistency
 setInterval(()=>{ touchLeft = touchLeft || !!keys.left; touchRight = touchRight || !!keys.right; }, 20);
 
-// Prevent scrolling on mobile when touching canvas
+// touch prevent scroll
 document.body.addEventListener('touchstart', e=>{ if(e.target===canvas) e.preventDefault(); }, {passive:false});
 
-// small helpers
-function shadeColor(col, percent){
-  // col like #rrggbb
-  const num = parseInt(col.slice(1),16);
-  let r = (num >> 16) + percent; if(r>255) r=255; if(r<0) r=0;
-  let g = ((num >> 8) & 0x00FF) + percent; if(g>255) g=255; if(g<0) g=0;
-  let b = (num & 0x0000FF) + percent; if(b>255) b=255; if(b<0) b=0;
-  return '#' + (r<<16 | g<<8 | b).toString(16).padStart(6,'0');
-}
+// particles spawn helper
+function spawnParticle(x,y,vx,vy,life,color){ particles.push({x,y,vx,vy,life,maxLife:life,color}); }
+
+function worldToScreenX(x,z,perspective){ const cx = (canvas.width/(window.devicePixelRatio||1))/2; return cx + x * perspective * (canvas.width/(window.devicePixelRatio||1))/2; }
+
+// color shade helper
+function shadeColor(col, percent){ const num = parseInt(col.slice(1),16); let r=(num>>16)+percent; if(r>255) r=255; if(r<0) r=0; let g=((num>>8)&0x00FF)+percent; if(g>255) g=255; if(g<0) g=0; let b=(num&0x0000FF)+percent; if(b>255) b=255; if(b<0) b=0; return '#'+( (r<<16) | (g<<8) | b ).toString(16).padStart(6,'0'); }
 
 </script>
 </body>
