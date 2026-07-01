@@ -1,25 +1,225 @@
-
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>Open Wheel Racer</title>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<title>Open Wheel Racer — 3D Mobile</title>
 <style>
-body{margin:0;background:#222}canvas{display:block;margin:auto;background:#6bb}
-</style></head><body>
-<canvas id=c width=900 height=600></canvas>
+  html,body{height:100%;margin:0;background:#111;color:#fff;font-family:Arial,Helvetica,sans-serif}
+  #game-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+  canvas{display:block;background:linear-gradient(#3aa,#6bb);touch-action:none}
+  .ui{position:fixed;left:0;right:0;bottom:10px;display:flex;justify-content:space-between;padding:0 20px;pointer-events:none}
+  .btn{width:86px;height:86px;border-radius:44px;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;font-size:28px;pointer-events:auto;color:#fff;user-select:none}
+  .center-ui{position:fixed;left:50%;transform:translateX(-50%);top:10px;background:rgba(0,0,0,0.4);padding:6px 10px;border-radius:6px}
+  #finish{position:fixed;left:50%;top:40%;transform:translateX(-50%);font-size:48px;display:none}
+  @media(min-width:600px){.btn{width:110px;height:110px;border-radius:56px;font-size:32px}}
+</style>
+</head>
+<body>
+<div id=game-wrap>
+  <canvas id=c></canvas>
+</div>
+<div class=center-ui id=status>Lap: 0 / 5 &nbsp; Speed: 0</div>
+<div class=ui>
+  <div id=left class=btn>&larr;</div>
+  <div id=right class=btn>&rarr;</div>
+</div>
+<div id=finish>FINISH!</div>
 <script>
-const c=document.getElementById('c'),x=c.getContext('2d');
-let px=450,laps=0,off=0,keys={};onkeydown=e=>keys[e.key]=1;onkeyup=e=>keys[e.key]=0;
-function car(cx,cy,col){x.fillStyle=col;x.fillRect(cx-8,cy-20,16,40);x.fillRect(cx-18,cy-10,36,20);x.fillStyle="#111";[-16,16].forEach(dx=>{x.fillRect(cx+dx-3,cy-18,6,10);x.fillRect(cx+dx-3,cy+8,6,10);});}
-function loop(){
- if(keys.ArrowLeft)px-=5;if(keys.ArrowRight)px+=5;off+=4;if(off>500){off=0;laps=Math.min(5,laps+1);}
- x.fillStyle="#2a2";x.fillRect(0,0,900,600);
- x.fillStyle="#555";x.fillRect(150,0,600,600);
- x.fillStyle="#bbb";x.fillRect(140,0,10,600);x.fillRect(750,0,10,600);
- x.fillStyle="#c00";
- for(let y=-40;y<640;y+=80){x.fillRect(170,y+off%80,120,20);x.fillRect(610,y+off%80,120,20);x.fillStyle="#fff";x.font="16px Arial";x.fillText("COME COOK WITH ALFIE",180,y+15+off%80);x.fillStyle="#c00";}
- x.fillStyle="#777";x.fillRect(0,20,140,120);x.fillRect(760,20,140,120);
- for(let i=0;i<40;i++){x.fillStyle=i%2?"#44f":"#ff4";x.fillRect((i%10)*12+10,30+Math.floor(i/10)*12,8,8);x.fillRect(770+(i%10)*12,30+Math.floor(i/10)*12,8,8);}
- car(px,500,"red");car(380,250,"blue");car(520,180,"black");
- x.fillStyle="#fff";x.font="24px Arial";x.fillText("Lap: "+laps+"/5",20,580);
- if(laps>=5){x.font="48px Arial";x.fillText("FINISH!",360,300);}
- requestAnimationFrame(loop);}
-loop();
-</script></body></html>
+// Responsive canvas with DPR
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+function resize(){
+  const DPR = Math.max(1, window.devicePixelRatio || 1);
+  const w = Math.min(window.innerWidth, 900);
+  const h = Math.min(window.innerHeight, 1200);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.width = Math.floor(w * DPR);
+  canvas.height = Math.floor(h * DPR);
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// Game state
+let keys = {left:0,right:0};
+let touchLeft=false,touchRight=false;
+let tilt=0; // -1..1
+let playerX = 0; // -1..1, relative to center of road
+let speed = 0; // forward speed
+let distance = 0; // distance travelled in "meters"
+let laps = 0;
+const maxLaps = 5;
+const status = document.getElementById('status');
+const finishEl = document.getElementById('finish');
+
+// Controls: buttons and touch zones
+const leftBtn = document.getElementById('left');
+const rightBtn = document.getElementById('right');
+leftBtn.addEventListener('pointerdown', e=>{e.preventDefault();touchLeft=true});
+leftBtn.addEventListener('pointerup', e=>{touchLeft=false});
+leftBtn.addEventListener('pointercancel', e=>{touchLeft=false});
+rightBtn.addEventListener('pointerdown', e=>{e.preventDefault();touchRight=true});
+rightBtn.addEventListener('pointerup', e=>{touchRight=false});
+rightBtn.addEventListener('pointercancel', e=>{touchRight=false});
+
+// Full-canvas touch steering for mobile
+let activePointer = null;
+canvas.addEventListener('pointerdown', e=>{
+  activePointer = e.pointerId; canvas.setPointerCapture(activePointer);
+  handlePointer(e);
+});
+canvas.addEventListener('pointermove', e=>{ if(e.pointerId===activePointer) handlePointer(e); });
+canvas.addEventListener('pointerup', e=>{ if(e.pointerId===activePointer){releasePointer(); activePointer=null;} });
+canvas.addEventListener('pointercancel', e=>{ if(e.pointerId===activePointer){releasePointer(); activePointer=null;} });
+function handlePointer(e){
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) / rect.width; // 0..1
+  // left half steers left, right half steers right, distance from center determines strength
+  if(x < 0.45){ touchLeft = true; touchRight = false; }
+  else if(x > 0.55){ touchRight = true; touchLeft = false; }
+  else { touchLeft = touchRight = false; }
+}
+function releasePointer(){ touchLeft = touchRight = false; }
+
+// Device tilt support (optional)
+if(window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function'){
+  // iOS 13+ requires permission
+  window.addEventListener('click', ()=>{
+    DeviceOrientationEvent.requestPermission && DeviceOrientationEvent.requestPermission().catch(()=>{});
+  }, {once:true});
+}
+window.addEventListener('deviceorientation', e=>{
+  if(e.gamma!=null){ // gamma is left-right tilt in degrees -90..90
+    tilt = Math.max(-1, Math.min(1, e.gamma / 25));
+  }
+});
+
+// Simple 3D road rendering parameters
+const road = {length: 5000, // meters per lap
+  lanes:2, width: 400, // visual width at camera
+  camZ: 0, camHeight: 120}
+
+function project(x, y, z, width, height){
+  // simple perspective projection for road segments
+  const perspective = 200 / (z + 200);
+  const screenX = (canvas.width/ (window.devicePixelRatio||1))/2 + x * perspective * (canvas.width/(window.devicePixelRatio||1))/2;
+  const screenY = (canvas.height/ (window.devicePixelRatio||1)) - y * perspective * 600;
+  return {x: screenX, y: screenY, scale: perspective};
+}
+
+// draw road using trapezoids for successive segments
+function drawRoad(){
+  const viewDepth = 120; // number of segments to draw
+  const segLength = 20; // meters per segment
+  const roadWidth = road.width;
+  for(let i=0;i<viewDepth;i++){
+    const z1 = (i * segLength) + (distance % segLength);
+    const z2 = ((i+1) * segLength) + (distance % segLength);
+    const perspective1 = 200 / (z1 + 200);
+    const perspective2 = 200 / (z2 + 200);
+    const laneMarkW = 6;
+    const roadW1 = roadWidth * perspective1;
+    const roadW2 = roadWidth * perspective2;
+    const cx = (canvas.width/ (window.devicePixelRatio||1))/2;
+    const left1 = cx - roadW1/2 + (playerX*100 * perspective1);
+    const right1 = cx + roadW1/2 + (playerX*100 * perspective1);
+    const left2 = cx - roadW2/2 + (playerX*100 * perspective2);
+    const right2 = cx + roadW2/2 + (playerX*100 * perspective2);
+    const y1 = (canvas.height/ (window.devicePixelRatio||1)) - i*6;
+    const y2 = (canvas.height/ (window.devicePixelRatio||1)) - (i+1)*6;
+    // grass
+    ctx.fillStyle = (i%2? '#1a6':'#164');
+    ctx.beginPath(); ctx.moveTo(0,y2); ctx.lineTo(left2,y2); ctx.lineTo(left1,y1); ctx.lineTo(0,y1); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(right2,y2); ctx.lineTo(canvas.width/ (window.devicePixelRatio||1),y2); ctx.lineTo(canvas.width/ (window.devicePixelRatio||1),y1); ctx.lineTo(right1,y1); ctx.closePath(); ctx.fill();
+    // road
+    ctx.fillStyle = '#444'; ctx.beginPath(); ctx.moveTo(left2,y2); ctx.lineTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(left1,y1); ctx.closePath(); ctx.fill();
+    // rumble strips
+    ctx.fillStyle = '#eee'; ctx.beginPath(); ctx.moveTo(left2,y2); ctx.lineTo(left1,y1); ctx.lineTo(left1+10,y1); ctx.lineTo(left2+10,y2); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(right2,y2); ctx.lineTo(right1,y1); ctx.lineTo(right1-10,y1); ctx.lineTo(right2-10,y2); ctx.closePath(); ctx.fill();
+    // center line (dashed)
+    if(i%3===0){
+      ctx.fillStyle = '#fff';
+      const cx1 = (left1+right1)/2; const cx2 = (left2+right2)/2;
+      const w1 = Math.max(2, laneMarkW * perspective1);
+      const w2 = Math.max(2, laneMarkW * perspective2);
+      ctx.beginPath(); ctx.moveTo(cx2-w2/2,y2); ctx.lineTo(cx2+w2/2,y2); ctx.lineTo(cx1+w1/2,y1); ctx.lineTo(cx1-w1/2,y1); ctx.closePath(); ctx.fill();
+    }
+  }
+}
+
+function drawCar(xPos, yPos, color, scale=1, angle=0){
+  const carW = 44 * scale;
+  const carH = 70 * scale;
+  ctx.save(); ctx.translate(xPos,yPos); ctx.rotate(angle);
+  // body
+  ctx.fillStyle = color; ctx.fillRect(-carW/2, -carH/2, carW, carH);
+  // cockpit
+  ctx.fillStyle = '#222'; ctx.fillRect(-carW/6, -carH/2 + 8, carW/3, carH/3);
+  // wheels
+  ctx.fillStyle = '#000'; ctx.fillRect(-carW/2 -4, -carH/4, 8, 18); ctx.fillRect(carW/2 -4, -carH/4, 8, 18);
+  ctx.restore();
+}
+
+// Game loop
+let last = performance.now();
+function loop(now){
+  const dt = Math.min(50, now - last) / 1000; last = now;
+  // input
+  let steer = 0;
+  if(touchLeft) steer -= 1; if(touchRight) steer += 1;
+  steer += tilt; // tilt adds fractional steer
+  // smooth playerX movement
+  const turnSpeed = 1.8; // how fast you move left/right
+  playerX += steer * turnSpeed * dt;
+  playerX = Math.max(-1.2, Math.min(1.2, playerX));
+  // speed control auto
+  const targetSpeed = 120; // ideal speed
+  const accel = 80;
+  speed += (targetSpeed - speed) * 0.5 * dt;
+  distance += speed * dt;
+  // lap handling
+  const lapMeters = road.length;
+  const newLaps = Math.floor(distance / lapMeters);
+  if(newLaps > laps){ laps = Math.min(maxLaps, newLaps); }
+  // render
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  drawRoad();
+  // draw opponent cars (simple stationary ahead)
+  // compute perspective for opponents
+  const opps = [ {z: 240, x:-50, color:'#00f'}, {z:360,x:60,color:'#000'}, {z:520,x:20,color:'#ffeb3b'} ];
+  for(const o of opps){
+    const z = o.z - (distance%1000); // simple relative movement
+    const p = 200 / (z + 200);
+    const screenX = (canvas.width/ (window.devicePixelRatio||1))/2 + (o.x + playerX*20) * p * (canvas.width/(window.devicePixelRatio||1))/2 / 100;
+    const screenY = (canvas.height/ (window.devicePixelRatio||1)) - p * 600;
+    if(screenY > 50 && screenY < canvas.height){
+      drawCar(screenX, screenY, o.color, p*1.2, (playerX*0.2));
+    }
+  }
+  // draw player car near bottom
+  const playerScreenX = (canvas.width/ (window.devicePixelRatio||1))/2 + playerX * (canvas.width/(window.devicePixelRatio||1))/4;
+  const playerScreenY = (canvas.height/ (window.devicePixelRatio||1)) - 80;
+  drawCar(playerScreenX, playerScreenY, '#c62828', 1, -playerX*0.4);
+
+  // HUD
+  status.textContent = `Lap: ${Math.min(laps,maxLaps)} / ${maxLaps}   Speed: ${Math.round(speed)} `;
+  if(laps >= maxLaps){ finishEl.style.display='block'; }
+  else finishEl.style.display='none';
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// Keyboard support for desktop
+window.addEventListener('keydown', e=>{ if(e.key==='ArrowLeft') keys.left=1; if(e.key==='ArrowRight') keys.right=1; });
+window.addEventListener('keyup', e=>{ if(e.key==='ArrowLeft') keys.left=0; if(e.key==='ArrowRight') keys.right=0; });
+// map keys to touch variables for consistency
+setInterval(()=>{ touchLeft = touchLeft || !!keys.left; touchRight = touchRight || !!keys.right; }, 20);
+
+// Prevent scrolling on mobile when touching canvas
+document.body.addEventListener('touchstart', e=>{ if(e.target===canvas) e.preventDefault(); }, {passive:false});
+</script>
+</body>
+</html>
