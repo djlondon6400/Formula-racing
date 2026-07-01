@@ -42,6 +42,25 @@
   
   .menu-glow{position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(255,107,53,0.1) 0%,transparent 70%);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
   
+  /* Mode Selection Menu */
+  #mode-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0a0e27 0%,#1a1f3a 100%);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column}
+  #mode-overlay.hidden{display:none}
+  
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;max-width:800px}
+  .mode-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,107,53,0.3);border-radius:16px;padding:30px;text-align:center;cursor:pointer;transition:all 0.3s;backdrop-filter:blur(10px)}
+  .mode-card:hover{transform:translateY(-8px);background:rgba(255,255,255,0.1);border-color:#ff6b35;box-shadow:0 12px 48px rgba(255,107,53,0.4)}
+  .mode-icon{font-size:48px;margin-bottom:15px}
+  .mode-title{font-size:24px;font-weight:700;margin-bottom:10px;color:#fff}
+  .mode-desc{font-size:14px;color:#8899ff;opacity:0.8;margin-bottom:20px}
+  
+  .back-btn{position:absolute;top:20px;left:20px;padding:12px 24px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;transition:all 0.3s}
+  .back-btn:hover{background:rgba(255,255,255,0.2);border-color:#fff}
+  
+  @media(max-width:900px){
+    .mode-grid{grid-template-columns:1fr;max-width:400px}
+    .menu-btn{min-width:250px}
+  }
+  
   @media(min-width:600px){.btn{width:110px;height:110px;border-radius:56px;font-size:32px}}
 </style>
 </head>
@@ -52,13 +71,52 @@
     <h1 class="menu-title">OPEN WHEEL RACER</h1>
     <p class="menu-subtitle">Ultra 3D Graphics Racing</p>
     <div class="menu-buttons">
-      <button class="menu-btn" id="start-btn">🏁 START RACE</button>
-      <button class="menu-btn secondary" id="settings-btn">⚙️ SETTINGS</button>
+      <button class="menu-btn" id="play-btn">🏁 PLAY</button>
+      <button class="menu-btn secondary" id="garage-btn">🏎️ GARAGE</button>
     </div>
     <div class="menu-info">
-      <p>Advanced Physics • Procedural Track Design • Multiple Opponents</p>
+      <p>Advanced Physics • Procedural Track Design • Multiple Game Modes</p>
       <p>Use Arrow Keys or Touch Buttons to Steer</p>
     </div>
+  </div>
+</div>
+
+<div id="mode-overlay" class="hidden">
+  <button class="back-btn" id="back-btn">← BACK</button>
+  <div class="menu-container">
+    <h1 class="menu-title">SELECT MODE</h1>
+    <div class="mode-grid">
+      <div class="mode-card" id="solo-mode">
+        <div class="mode-icon">🚗</div>
+        <div class="mode-title">SOLO</div>
+        <div class="mode-desc">Race alone against the clock<br>Perfect your technique</div>
+      </div>
+      <div class="mode-card" id="competitive-mode">
+        <div class="mode-icon">🏆</div>
+        <div class="mode-title">COMPETITIVE</div>
+        <div class="mode-desc">Race against AI opponents<br>Fight for position</div>
+      </div>
+      <div class="mode-card" id="time-trial-mode">
+        <div class="mode-icon">⏱️</div>
+        <div class="mode-title">TIME TRIAL</div>
+        <div class="mode-desc">Single lap challenge<br>Beat your best time</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="garage-overlay" class="hidden">
+  <button class="back-btn" id="garage-back-btn">← BACK</button>
+  <div class="menu-container">
+    <h1 class="menu-title">🏎️ GARAGE</h1>
+    <div style="margin-top:40px;color:#8899ff;font-size:18px;padding:30px 40px;background:rgba(255,255,255,0.05);border-radius:12px;border:2px solid rgba(255,107,53,0.3)">
+      <p><strong>Car: Red Racer</strong></p>
+      <p>Speed: ⭐⭐⭐⭐⭐</p>
+      <p>Acceleration: ⭐⭐⭐⭐</p>
+      <p>Handling: ⭐⭐⭐⭐⭐</p>
+      <p style="margin-top:20px;font-size:14px;opacity:0.7">More customization options coming soon!</p>
+    </div>
+    <button class="menu-btn secondary" style="margin-top:30px" id="garage-close-btn">CLOSE</button>
   </div>
 </div>
 
@@ -81,21 +139,63 @@ import { UnrealBloomPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/po
 
 // Menu handling
 const menuOverlay = document.getElementById('menu-overlay');
-const startBtn = document.getElementById('start-btn');
-const settingsBtn = document.getElementById('settings-btn');
+const modeOverlay = document.getElementById('mode-overlay');
+const garageOverlay = document.getElementById('garage-overlay');
+const playBtn = document.getElementById('play-btn');
+const garageBtn = document.getElementById('garage-btn');
+const backBtn = document.getElementById('back-btn');
+const garageBackBtn = document.getElementById('garage-back-btn');
+const garageCloseBtn = document.getElementById('garage-close-btn');
 
-startBtn.addEventListener('click', () => {
+const soloMode = document.getElementById('solo-mode');
+const competitiveMode = document.getElementById('competitive-mode');
+const timeTrialMode = document.getElementById('time-trial-mode');
+
+playBtn.addEventListener('click', () => {
   menuOverlay.classList.add('hidden');
+  modeOverlay.classList.remove('hidden');
+});
+
+garageBtn.addEventListener('click', () => {
+  menuOverlay.classList.add('hidden');
+  garageOverlay.classList.remove('hidden');
+});
+
+backBtn.addEventListener('click', () => {
+  modeOverlay.classList.add('hidden');
+  menuOverlay.classList.remove('hidden');
+});
+
+garageBackBtn.addEventListener('click', () => {
+  garageOverlay.classList.add('hidden');
+  menuOverlay.classList.remove('hidden');
+});
+
+garageCloseBtn.addEventListener('click', () => {
+  garageOverlay.classList.add('hidden');
+  menuOverlay.classList.remove('hidden');
+});
+
+let gameMode = 'competitive';
+let gameStarted = false;
+
+soloMode.addEventListener('click', () => {
+  gameMode = 'solo';
   startGame();
 });
 
-settingsBtn.addEventListener('click', () => {
-  alert('Settings feature coming soon!');
+competitiveMode.addEventListener('click', () => {
+  gameMode = 'competitive';
+  startGame();
 });
 
-let gameStarted = false;
+timeTrialMode.addEventListener('click', () => {
+  gameMode = 'time-trial';
+  startGame();
+});
 
 function startGame(){
+  modeOverlay.classList.add('hidden');
   gameStarted = true;
 }
 
@@ -492,11 +592,14 @@ let playerX = 0;
 let speed = 0;
 let distance = 0;
 let laps = 0;
-const maxLaps = 5;
+let maxLaps = 5;
 let fuel = 100;
 let damage = 0;
 let gear = 'N';
 let lastTime = performance.now();
+let bestLapTime = null;
+let currentLapTime = 0;
+let lastLapTime = 0;
 
 // Resize handler
 function onWindowResize(){
@@ -537,12 +640,14 @@ function updateMiniMap(){
   const playerAngle = (distance / trackLength) * Math.PI * 2;
   miniMapCtx.fillRect(60 + Math.cos(playerAngle) * 45 - 2, 60 + Math.sin(playerAngle) * 45 - 2, 4, 4);
   
-  // Opponents
-  opponents.forEach((opp, idx) => {
-    miniMapCtx.fillStyle = ['#0d47a1', '#ffc107', '#2e7d32'][idx];
-    const oppAngle = (opp.progress / trackLength) * Math.PI * 2;
-    miniMapCtx.fillRect(60 + Math.cos(oppAngle) * 45 - 2, 60 + Math.sin(oppAngle) * 45 - 2, 4, 4);
-  });
+  // Opponents (only in competitive mode)
+  if(gameMode === 'competitive'){
+    opponents.forEach((opp, idx) => {
+      miniMapCtx.fillStyle = ['#0d47a1', '#ffc107', '#2e7d32'][idx];
+      const oppAngle = (opp.progress / trackLength) * Math.PI * 2;
+      miniMapCtx.fillRect(60 + Math.cos(oppAngle) * 45 - 2, 60 + Math.sin(oppAngle) * 45 - 2, 4, 4);
+    });
+  }
 }
 
 // Physics-based gameplay
@@ -572,6 +677,7 @@ function animate(now){
   // Distance and lap tracking - only if game started
   if(gameStarted){
     distance += speed * dt * 2.8;
+    currentLapTime += dt;
   }
   
   // Lateral physics with drift
@@ -588,14 +694,16 @@ function animate(now){
   // Tilt car based on steer
   playerCar.rotation.z = steerAngle * 0.2;
   
-  // Update opponents with better AI
-  opponents.forEach((opp, idx) => {
-    opp.progress += opp.speed * dt * 2.8;
-    const tp = trackPosition(opp.progress);
-    const sway = Math.sin(now * 0.001 + idx * 1.5) * 1.2;
-    opp.mesh.position.lerp(new THREE.Vector3(tp.x + sway, tp.y + 0.5, tp.z), 0.6);
-    opp.mesh.rotation.y = -Math.atan2(sway, 10) * 0.3;
-  });
+  // Update opponents (only in competitive mode)
+  if(gameMode === 'competitive'){
+    opponents.forEach((opp, idx) => {
+      opp.progress += opp.speed * dt * 2.8;
+      const tp = trackPosition(opp.progress);
+      const sway = Math.sin(now * 0.001 + idx * 1.5) * 1.2;
+      opp.mesh.position.lerp(new THREE.Vector3(tp.x + sway, tp.y + 0.5, tp.z), 0.6);
+      opp.mesh.rotation.y = -Math.atan2(sway, 10) * 0.3;
+    });
+  }
   
   // Advanced camera following
   const desiredPos = new THREE.Vector3().copy(playerCar.position).add(
@@ -610,7 +718,17 @@ function animate(now){
   const rpm = Math.round((speed / 75) * 8000);
   gear = Math.floor((speed / 75) * 5) < 1 ? 'N' : String(Math.floor((speed / 75) * 5));
   
-  status.textContent = `LAP: ${lap} / ${maxLaps}   SPEED: ${Math.round(speed * 1.8)} KPH   RPM: ${rpm}`;
+  // Update status based on game mode
+  let statusText = `LAP: ${lap} / ${maxLaps}   SPEED: ${Math.round(speed * 1.8)} KPH   RPM: ${rpm}`;
+  if(gameMode === 'time-trial'){
+    statusText = `TIME: ${Math.floor(currentLapTime)}s   SPEED: ${Math.round(speed * 1.8)} KPH   RPM: ${rpm}`;
+    maxLaps = 1;
+  } else if(gameMode === 'solo'){
+    statusText = `LAP: ${lap} / 5   SPEED: ${Math.round(speed * 1.8)} KPH   RPM: ${rpm}`;
+    maxLaps = 5;
+  }
+  
+  status.textContent = statusText;
   hud.textContent = `FUEL: ${Math.max(0, Math.round(100 - distance * 0.003))}%   DAMAGE: ${Math.round(damage)}%   GEAR: ${gear}`;
   
   if(gameStarted && lap >= maxLaps){
