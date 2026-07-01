@@ -2,66 +2,96 @@
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no">
 <title>Open Wheel Racer — Ultra 3D Graphics</title>
 <style>
-  html,body{height:100%;margin:0;background:#0a0e27;color:#fff;font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+  *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  html,body{height:100%;margin:0;background:#0a0e27;color:#fff;font-family:Inter,Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;position:fixed;width:100%}
   #game-wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
   canvas{display:block;width:100%;height:100%;background:linear-gradient(135deg,#1a1f3a 0%,#0f1729 100%)}
-  .ui{position:fixed;left:0;right:0;bottom:10px;display:flex;justify-content:space-between;padding:0 20px;pointer-events:none}
-  .btn{width:86px;height:86px;border-radius:44px;background:linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.05));display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;pointer-events:all;border:none;color:#fff;transition:all 0.2s;user-select:none}
+  .ui{position:fixed;left:0;right:0;bottom:10px;display:flex;justify-content:space-between;padding:0 20px;pointer-events:none;z-index:100}
+  .btn{width:86px;height:86px;border-radius:44px;background:linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.05));display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;transition:all 0.2s;pointer-events:auto;touch-action:manipulation;user-select:none;-webkit-user-select:none;border:2px solid rgba(255,255,255,0.1)}
   .btn:hover{background:linear-gradient(180deg,rgba(255,255,255,0.15),rgba(255,255,255,0.08))}
   .btn:active{transform:scale(0.95);background:linear-gradient(180deg,rgba(255,255,255,0.2),rgba(255,255,255,0.1))}
-  .center-ui{position:fixed;left:50%;transform:translateX(-50%);top:10px;background:rgba(0,0,0,0.6);padding:12px 20px;border-radius:12px;font-weight:600;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
-  .hud{position:fixed;right:12px;top:70px;background:rgba(0,0,0,0.6);padding:12px 16px;border-radius:12px;text-align:right;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.3)}
-  .credits{position:fixed;left:10px;bottom:10px;opacity:0.5;font-size:11px}
-  #finish{position:fixed;left:50%;top:40%;transform:translateX(-50%);font-size:56px;display:none;padding:20px 40px;border-radius:12px;background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;box-shadow:0 8px 32px rgba(0,0,0,0.5);z-index:100}
-  .mini-map{position:fixed;right:12px;bottom:12px;width:120px;height:120px;background:rgba(0,0,0,0.7);border:2px solid rgba(255,255,255,0.2);border-radius:8px;backdrop-filter:blur(10px)}
+  .center-ui{position:fixed;left:50%;transform:translateX(-50%);top:10px;background:rgba(0,0,0,0.6);padding:12px 20px;border-radius:12px;font-weight:600;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 4px 12px rgba(0,0,0,0.5);z-index:100;font-size:13px}
+  .hud{position:fixed;right:12px;top:70px;background:rgba(0,0,0,0.6);padding:12px 16px;border-radius:12px;text-align:right;backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,0.1);box-shadow:0 4px 12px rgba(0,0,0,0.5);z-index:100;font-size:12px}
+  .credits{position:fixed;left:10px;bottom:10px;opacity:0.5;font-size:11px;z-index:50}
+  #finish{position:fixed;left:50%;top:40%;transform:translateX(-50%);font-size:56px;display:none;padding:20px 40px;border-radius:12px;background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;box-shadow:0 12px 48px rgba(255,107,53,0.6);z-index:200;text-align:center}
+  .mini-map{position:fixed;right:12px;bottom:12px;width:120px;height:120px;background:rgba(0,0,0,0.7);border:2px solid rgba(255,255,255,0.2);border-radius:8px;backdrop-filter:blur(10px);z-index:100}
   
   /* Main Menu Styles */
   #menu-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0a0e27 0%,#1a1f3a 100%);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column}
   #menu-overlay.hidden{display:none}
   
-  .menu-container{text-align:center;animation:menuSlideIn 0.6s ease-out}
+  .menu-container{text-align:center;animation:menuSlideIn 0.6s ease-out;padding:20px}
   @keyframes menuSlideIn{from{opacity:0;transform:translateY(-30px)}to{opacity:1;transform:translateY(0)}}
   
-  .menu-title{font-size:72px;font-weight:800;background:linear-gradient(135deg,#ff6b35,#f7931e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0 0 20px 0;text-shadow:0 4px 20px rgba(255,107,53,0.3);letter-spacing:2px}
+  .menu-title{font-size:clamp(32px,8vw,72px);font-weight:800;background:linear-gradient(135deg,#ff6b35,#f7931e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:0 0 20px 0;letter-spacing:2px}
   
-  .menu-subtitle{font-size:24px;color:#8899ff;margin:0 0 60px 0;font-weight:300;opacity:0.9}
+  .menu-subtitle{font-size:clamp(16px,5vw,24px);color:#8899ff;margin:0 0 60px 0;font-weight:300;opacity:0.9}
   
   .menu-buttons{display:flex;flex-direction:column;gap:20px;margin-bottom:60px}
   
-  .menu-btn{padding:18px 60px;font-size:20px;font-weight:600;border:2px solid transparent;border-radius:12px;cursor:pointer;transition:all 0.3s;background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;text-transform:uppercase;letter-spacing:1px;box-shadow:0 8px 32px rgba(255,107,53,0.3);min-width:300px}
-  .menu-btn:hover{transform:translateY(-4px);box-shadow:0 12px 48px rgba(255,107,53,0.5)}
-  .menu-btn:active{transform:translateY(-2px)}
+  .menu-btn{padding:18px 60px;font-size:clamp(14px,4vw,20px);font-weight:600;border:2px solid transparent;border-radius:12px;cursor:pointer;transition:all 0.3s;background:linear-gradient(135deg,#ff6b35,#f7931e);color:#fff;box-shadow:0 8px 32px rgba(255,107,53,0.4);touch-action:manipulation;-webkit-appearance:none;appearance:none;min-width:200px}
+  .menu-btn:active{transform:scale(0.98);box-shadow:0 4px 16px rgba(255,107,53,0.3)}
   
   .menu-btn.secondary{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3);color:#fff}
-  .menu-btn.secondary:hover{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.5);box-shadow:0 8px 32px rgba(255,255,255,0.2)}
+  .menu-btn.secondary:active{background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.5);box-shadow:0 4px 16px rgba(255,255,255,0.2)}
   
-  .menu-info{color:#8899ff;font-size:14px;opacity:0.7;margin-top:40px;max-width:400px}
+  .menu-info{color:#8899ff;font-size:clamp(12px,3vw,14px);opacity:0.7;margin-top:40px;max-width:400px;margin-left:auto;margin-right:auto}
   
   .menu-glow{position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(255,107,53,0.1) 0%,transparent 70%);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
   
   /* Mode Selection Menu */
-  #mode-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0a0e27 0%,#1a1f3a 100%);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column}
+  #mode-overlay{position:fixed;inset:0;background:linear-gradient(135deg,#0a0e27 0%,#1a1f3a 100%);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;overflow-y:auto;padding:20px}
   #mode-overlay.hidden{display:none}
   
-  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;max-width:800px}
-  .mode-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,107,53,0.3);border-radius:16px;padding:30px;text-align:center;cursor:pointer;transition:all 0.3s;backdrop-filter:blur(10px)}
-  .mode-card:hover{transform:translateY(-8px);background:rgba(255,255,255,0.1);border-color:#ff6b35;box-shadow:0 12px 48px rgba(255,107,53,0.4)}
+  .mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px;max-width:800px;width:100%;margin:0 auto}
+  .mode-card{background:rgba(255,255,255,0.05);border:2px solid rgba(255,107,53,0.3);border-radius:16px;padding:30px 20px;text-align:center;cursor:pointer;transition:all 0.3s;backdrop-filter:blur(10px);touch-action:manipulation;-webkit-appearance:none;appearance:none}
+  .mode-card:active{transform:scale(0.98);background:rgba(255,255,255,0.1);border-color:#ff6b35;box-shadow:0 8px 32px rgba(255,107,53,0.4)}
   .mode-icon{font-size:48px;margin-bottom:15px}
-  .mode-title{font-size:24px;font-weight:700;margin-bottom:10px;color:#fff}
-  .mode-desc{font-size:14px;color:#8899ff;opacity:0.8;margin-bottom:20px}
+  .mode-title{font-size:clamp(16px,4vw,24px);font-weight:700;margin-bottom:10px;color:#fff}
+  .mode-desc{font-size:clamp(12px,3vw,14px);color:#8899ff;opacity:0.8;margin-bottom:20px}
   
-  .back-btn{position:absolute;top:20px;left:20px;padding:12px 24px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;transition:all 0.3s}
-  .back-btn:hover{background:rgba(255,255,255,0.2);border-color:#fff}
+  .back-btn{position:absolute;top:20px;left:20px;padding:12px 24px;background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.3);color:#fff;border-radius:8px;cursor:pointer;font-size:16px;transition:all 0.3s;touch-action:manipulation;-webkit-appearance:none;appearance:none;z-index:1001}
+  .back-btn:active{background:rgba(255,255,255,0.2);border-color:#fff;transform:scale(0.98)}
   
+  /* Mobile optimizations */
   @media(max-width:900px){
     .mode-grid{grid-template-columns:1fr;max-width:400px}
-    .menu-btn{min-width:250px}
+    .menu-btn{min-width:200px;padding:16px 40px}
+    .btn{width:80px;height:80px;border-radius:40px;font-size:24px}
+    .center-ui{font-size:12px;padding:10px 16px}
+    .hud{font-size:11px;padding:10px 12px;top:60px}
   }
   
-  @media(min-width:600px){.btn{width:110px;height:110px;border-radius:56px;font-size:32px}}
+  @media(max-width:600px){
+    .btn{width:70px;height:70px;border-radius:35px;font-size:20px}
+    .center-ui{font-size:11px;padding:8px 12px;top:5px}
+    .hud{font-size:10px;padding:8px 10px;top:50px;right:8px}
+    .mini-map{width:100px;height:100px;bottom:8px;right:8px}
+    .credits{font-size:9px;left:5px;bottom:5px}
+    .mode-card{padding:20px 15px}
+    .mode-card:active{transform:scale(0.95)}
+    #finish{font-size:36px;padding:15px 30px;top:35%}
+  }
+  
+  @media(max-width:480px){
+    .btn{width:65px;height:65px;border-radius:32px;font-size:18px}
+    .center-ui{font-size:10px;padding:6px 10px}
+    .hud{font-size:9px;padding:6px 8px}
+    .mini-map{width:90px;height:90px}
+    .menu-btn{padding:14px 30px}
+    .mode-grid{gap:20px}
+    .mode-card{padding:15px 10px}
+    #finish{font-size:28px;padding:10px 20px}
+  }
+  
+  /* Landscape mode */
+  @media(max-height:600px){
+    .hud{top:10px}
+    .center-ui{top:8px}
+  }
 </style>
 </head>
 <body>
@@ -109,12 +139,12 @@
   <button class="back-btn" id="garage-back-btn">← BACK</button>
   <div class="menu-container">
     <h1 class="menu-title">🏎️ GARAGE</h1>
-    <div style="margin-top:40px;color:#8899ff;font-size:18px;padding:30px 40px;background:rgba(255,255,255,0.05);border-radius:12px;border:2px solid rgba(255,107,53,0.3)">
+    <div style="margin-top:40px;color:#8899ff;font-size:16px;padding:30px 20px;background:rgba(255,255,255,0.05);border-radius:12px;border:2px solid rgba(255,107,53,0.3)">
       <p><strong>Car: Red Racer</strong></p>
       <p>Speed: ⭐⭐⭐⭐⭐</p>
       <p>Acceleration: ⭐⭐⭐⭐</p>
       <p>Handling: ⭐⭐⭐⭐⭐</p>
-      <p style="margin-top:20px;font-size:14px;opacity:0.7">More customization options coming soon!</p>
+      <p style="margin-top:20px;font-size:12px;opacity:0.7">More customization options coming soon!</p>
     </div>
     <button class="menu-btn secondary" style="margin-top:30px" id="garage-close-btn">CLOSE</button>
   </div>
@@ -129,13 +159,20 @@
   <div id=right class=btn>&rarr;</div>
 </div>
 <div id=finish>🏁 FINISH! 🏁</div>
-<div class=credits>Ultra 3D WebGL Racing • Advanced Physics • Procedural Track Design</div>
+<div class=credits>Ultra 3D WebGL Racing</div>
 
 <script type="module">
 import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 import { EffectComposer } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'https://unpkg.com/three@0.160.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+
+// Prevent default touch behaviors
+document.addEventListener('touchmove', e => {
+  if(e.target.id === 'game-wrap' || e.target.tagName === 'CANVAS') e.preventDefault();
+}, {passive: false});
+
+document.addEventListener('gesturestart', e => e.preventDefault());
 
 // Menu handling
 const menuOverlay = document.getElementById('menu-overlay');
@@ -211,14 +248,14 @@ const scene = new THREE.Scene();
 scene.fog = new THREE.Fog(0x0a0e27, 500, 1500);
 scene.background = new THREE.Color(0x0a0e27);
 
-const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+const renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance', precision:'lowp'});
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowShadowMap;
-renderer.shadowMap.resolution = 2048;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.resolution = 1024;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
 container.appendChild(renderer.domElement);
 
 // Post-processing
@@ -226,7 +263,7 @@ const composer = new EffectComposer(renderer);
 const renderPass = new RenderPass(scene, null);
 composer.addPass(renderPass);
 
-const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.5, 0.4, 0.85);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.2, 0.3, 0.85);
 composer.addPass(bloomPass);
 
 const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 8000);
@@ -242,7 +279,7 @@ scene.add(hemi);
 const sunLight = new THREE.DirectionalLight(0xffffff, 1.8);
 sunLight.position.set(150, 200, 100);
 sunLight.castShadow = true;
-sunLight.shadow.mapSize.set(4096, 4096);
+sunLight.shadow.mapSize.set(2048, 2048);
 sunLight.shadow.camera.far = 2000;
 sunLight.shadow.camera.left = -400;
 sunLight.shadow.camera.right = 400;
@@ -259,7 +296,7 @@ scene.add(accentLight);
 
 // High-quality road texture
 function makeAdvancedRoadTexture(){
-  const w = 2048, h = 2048;
+  const w = 1024, h = 1024;
   const c = document.createElement('canvas');
   c.width = w;
   c.height = h;
@@ -274,14 +311,14 @@ function makeAdvancedRoadTexture(){
   cx.fillRect(0, 0, w, h);
   
   // Tire marks
-  for(let i = 0; i < 50; i++){
+  for(let i = 0; i < 30; i++){
     cx.fillStyle = `rgba(0,0,0,${Math.random()*0.3})`;
-    cx.fillRect(Math.random()*w, Math.random()*h, Math.random()*100, Math.random()*8);
+    cx.fillRect(Math.random()*w, Math.random()*h, Math.random()*80, Math.random()*6);
   }
   
   // Center dashed line (bright)
   cx.strokeStyle = '#ffff00';
-  cx.lineWidth = 8;
+  cx.lineWidth = 6;
   cx.setLineDash([60, 40]);
   cx.beginPath();
   cx.moveTo(w*0.48, 0);
@@ -290,7 +327,7 @@ function makeAdvancedRoadTexture(){
   
   // Edge lines (white)
   cx.strokeStyle = '#ffffff';
-  cx.lineWidth = 6;
+  cx.lineWidth = 4;
   cx.setLineDash([]);
   cx.beginPath();
   cx.moveTo(w*0.02, 0);
@@ -301,27 +338,16 @@ function makeAdvancedRoadTexture(){
   cx.lineTo(w*0.98, h);
   cx.stroke();
   
-  // High-frequency noise for realism
-  const imgData = cx.getImageData(0, 0, w, h);
-  const data = imgData.data;
-  for(let i = 0; i < data.length; i += 4){
-    const noise = (Math.random()-0.5)*40;
-    data[i] += noise;
-    data[i+1] += noise;
-    data[i+2] += noise;
-  }
-  cx.putImageData(imgData, 0, 0);
-  
   return new THREE.CanvasTexture(c);
 }
 
 const roadTex = makeAdvancedRoadTexture();
 roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
-roadTex.repeat.set(60, 1);
+roadTex.repeat.set(40, 1);
 
 // Create advanced track with multiple curves
 const trackLength = 5000;
-const trackGeom = new THREE.PlaneGeometry(45, trackLength, 32, 1024);
+const trackGeom = new THREE.PlaneGeometry(45, trackLength, 16, 256);
 trackGeom.rotateX(-Math.PI/2);
 
 const pos = trackGeom.attributes.position;
@@ -349,7 +375,7 @@ trackMesh.castShadow = true;
 scene.add(trackMesh);
 
 // Pit lane with distinct marking
-const pitGeom = new THREE.PlaneGeometry(14, 1000, 1, 128);
+const pitGeom = new THREE.PlaneGeometry(14, 1000, 1, 64);
 pitGeom.rotateX(-Math.PI/2);
 const pitMat = new THREE.MeshStandardMaterial({color: 0x662211, metalness: 0.1, roughness: 0.9});
 const pitMesh = new THREE.Mesh(pitGeom, pitMat);
@@ -370,7 +396,7 @@ function addCurb(x, z, len){
 addCurb(-24, 0, trackLength);
 addCurb(24, 0, trackLength);
 
-// Barrier system
+// Barrier system (reduced for mobile)
 function addBarrier(x, z){
   const barrierGeo = new THREE.BoxGeometry(0.5, 1.5, 8);
   const barrierMat = new THREE.MeshStandardMaterial({color: 0x333333, metalness: 0.3, roughness: 0.5});
@@ -380,9 +406,9 @@ function addBarrier(x, z){
   barrier.receiveShadow = true;
   scene.add(barrier);
 }
-for(let z = -trackLength/2; z < trackLength/2; z += 100){
+for(let z = -trackLength/2; z < trackLength/2; z += 150){
   addBarrier(-27, z);
-  addBarrier(27, z + 50);
+  addBarrier(27, z + 75);
 }
 
 // Advanced car model with better design
@@ -395,7 +421,7 @@ function makeDetailedCar(color = 0xff3333){
   const glassMat = new THREE.MeshStandardMaterial({color: 0x1a2a4a, metalness: 0.1, roughness: 0.05, transparent: true, opacity: 0.8});
   const wheelMat = new THREE.MeshStandardMaterial({color: 0x111111, metalness: 0.6, roughness: 0.4});
   
-  // Main chassis - sleek formula-1 style
+  // Main chassis
   const chassisGeo = new THREE.BoxGeometry(2.8, 0.4, 5.2);
   const chassis = new THREE.Mesh(chassisGeo, bodyMat);
   chassis.position.y = 0.7;
@@ -403,7 +429,7 @@ function makeDetailedCar(color = 0xff3333){
   chassis.receiveShadow = true;
   car.add(chassis);
   
-  // Front wing - aerodynamic
+  // Front wing
   const frontWingGeo = new THREE.BoxGeometry(3.2, 0.1, 0.4);
   const frontWing = new THREE.Mesh(frontWingGeo, blackMat);
   frontWing.position.set(0, 0.5, 2.4);
@@ -411,7 +437,7 @@ function makeDetailedCar(color = 0xff3333){
   frontWing.receiveShadow = true;
   car.add(frontWing);
   
-  // Rear wing - high downforce
+  // Rear wing
   const rearWingGeo = new THREE.BoxGeometry(2.2, 0.15, 0.5);
   const rearWing = new THREE.Mesh(rearWingGeo, blackMat);
   rearWing.position.set(0, 0.55, -2.5);
@@ -419,7 +445,7 @@ function makeDetailedCar(color = 0xff3333){
   rearWing.receiveShadow = true;
   car.add(rearWing);
   
-  // Cockpit - transparent
+  // Cockpit
   const cockpitGeo = new THREE.BoxGeometry(1.4, 0.5, 1.8);
   const cockpit = new THREE.Mesh(cockpitGeo, glassMat);
   cockpit.position.set(0, 1.1, -0.3);
@@ -445,14 +471,9 @@ function makeDetailedCar(color = 0xff3333){
   nose.receiveShadow = true;
   car.add(nose);
   
-  // Advanced wheels with rim detail
-  const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.52, 32);
+  // Wheels
+  const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.52, 16);
   wheelGeo.rotateZ(Math.PI/2);
-  
-  // Rim
-  const rimGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.48, 32);
-  rimGeo.rotateZ(Math.PI/2);
-  const rimMat = new THREE.MeshStandardMaterial({color: 0x444444, metalness: 0.8, roughness: 0.3});
   
   for(const dx of [-1, 1]){
     for(const dz of [-1.6, 1.6]){
@@ -461,45 +482,18 @@ function makeDetailedCar(color = 0xff3333){
       w.castShadow = true;
       w.receiveShadow = true;
       car.add(w);
-      
-      const rim = new THREE.Mesh(rimGeo, rimMat);
-      rim.position.set(dx * 1.4, 0.42, dz);
-      car.add(rim);
     }
   }
   
   // Headlights
-  const lightGeo = new THREE.SphereGeometry(0.15, 16, 16);
+  const lightGeo = new THREE.SphereGeometry(0.15, 8, 8);
   const lightMat = new THREE.MeshStandardMaterial({color: 0xffff99, emissive: 0xffff00, emissiveIntensity: 0.8});
   for(const side of [-1, 1]){
     const light = new THREE.Mesh(lightGeo, lightMat);
     light.position.set(side * 1.1, 0.8, 2.6);
     light.castShadow = true;
     car.add(light);
-    
-    const headlight = new THREE.PointLight(0xffff99, 0.5, 100);
-    headlight.position.copy(light.position);
-    car.add(headlight);
   }
-  
-  // Race number
-  const canvas = document.createElement('canvas');
-  canvas.width = 256;
-  canvas.height = 256;
-  const cx = canvas.getContext('2d');
-  cx.fillStyle = '#ffffff';
-  cx.fillRect(0, 0, 256, 256);
-  cx.fillStyle = '#000000';
-  cx.font = 'bold 180px Arial';
-  cx.textAlign = 'center';
-  cx.textBaseline = 'middle';
-  cx.fillText(Math.floor(Math.random()*99), 128, 128);
-  
-  const tex = new THREE.CanvasTexture(canvas);
-  const plateMat = new THREE.MeshStandardMaterial({map: tex});
-  const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), plateMat);
-  plate.position.set(0, 1.15, -0.7);
-  car.add(plate);
   
   return car;
 }
@@ -518,24 +512,42 @@ for(let i = 0; i < 3; i++){
   opponents.push({mesh: c, progress: 250 + i * 50, speed: 55 + Math.random() * 8});
 }
 
-// Camera chase
-const chaseOffset = new THREE.Vector3(0, 8, -16);
-
-// Input handling
+// Input handling with touch improvements
 let keys = {left: 0, right: 0};
-let touchLeft = false, touchRight = false;
+let touchActive = false;
 
 const leftBtn = document.getElementById('left');
 const rightBtn = document.getElementById('right');
 
-leftBtn.addEventListener('pointerdown', e => {e.preventDefault(); touchLeft = true});
-leftBtn.addEventListener('pointerup', () => {touchLeft = false});
-leftBtn.addEventListener('pointercancel', () => {touchLeft = false});
+// Better touch handling
+function setupTouchButton(btn, direction){
+  btn.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    touchActive = true;
+    if(direction === 'left') keys.left = 1;
+    if(direction === 'right') keys.right = 1;
+  });
+  
+  btn.addEventListener('pointerup', () => {
+    if(direction === 'left') keys.left = 0;
+    if(direction === 'right') keys.right = 0;
+  });
+  
+  btn.addEventListener('pointercancel', () => {
+    if(direction === 'left') keys.left = 0;
+    if(direction === 'right') keys.right = 0;
+  });
+  
+  btn.addEventListener('pointerleave', () => {
+    if(direction === 'left') keys.left = 0;
+    if(direction === 'right') keys.right = 0;
+  });
+}
 
-rightBtn.addEventListener('pointerdown', e => {e.preventDefault(); touchRight = true});
-rightBtn.addEventListener('pointerup', () => {touchRight = false});
-rightBtn.addEventListener('pointercancel', () => {touchRight = false});
+setupTouchButton(leftBtn, 'left');
+setupTouchButton(rightBtn, 'right');
 
+// Keyboard support
 window.addEventListener('keydown', e => {
   if(e.key === 'ArrowLeft') keys.left = 1;
   if(e.key === 'ArrowRight') keys.right = 1;
@@ -545,47 +557,6 @@ window.addEventListener('keyup', e => {
   if(e.key === 'ArrowLeft') keys.left = 0;
   if(e.key === 'ArrowRight') keys.right = 0;
 });
-
-let activePointer = null;
-renderer.domElement.addEventListener('pointerdown', e => {
-  activePointer = e.pointerId;
-  renderer.domElement.setPointerCapture(activePointer);
-  handlePointer(e);
-});
-
-renderer.domElement.addEventListener('pointermove', e => {
-  if(e.pointerId === activePointer) handlePointer(e);
-});
-
-renderer.domElement.addEventListener('pointerup', e => {
-  if(e.pointerId === activePointer){
-    releasePointer();
-    activePointer = null;
-  }
-});
-
-renderer.domElement.addEventListener('pointercancel', e => {
-  if(e.pointerId === activePointer){
-    releasePointer();
-    activePointer = null;
-  }
-});
-
-function handlePointer(e){
-  const rect = renderer.domElement.getBoundingClientRect();
-  const x = (e.clientX - rect.left) / rect.width;
-  if(x < 0.45){
-    touchLeft = true;
-    touchRight = false;
-  } else if(x > 0.55){
-    touchLeft = false;
-    touchRight = true;
-  }
-}
-
-function releasePointer(){
-  touchLeft = touchRight = false;
-}
 
 // Game variables
 let playerX = 0;
@@ -597,9 +568,7 @@ let fuel = 100;
 let damage = 0;
 let gear = 'N';
 let lastTime = performance.now();
-let bestLapTime = null;
 let currentLapTime = 0;
-let lastLapTime = 0;
 
 // Resize handler
 function onWindowResize(){
@@ -640,7 +609,7 @@ function updateMiniMap(){
   const playerAngle = (distance / trackLength) * Math.PI * 2;
   miniMapCtx.fillRect(60 + Math.cos(playerAngle) * 45 - 2, 60 + Math.sin(playerAngle) * 45 - 2, 4, 4);
   
-  // Opponents (only in competitive mode)
+  // Opponents
   if(gameMode === 'competitive'){
     opponents.forEach((opp, idx) => {
       miniMapCtx.fillStyle = ['#0d47a1', '#ffc107', '#2e7d32'][idx];
@@ -659,11 +628,7 @@ function animate(now){
   lastTime = now;
   
   // Input
-  let steerInput = 0;
-  if(keys.left) steerInput -= 1;
-  if(keys.right) steerInput += 1;
-  if(touchLeft) steerInput -= 1;
-  if(touchRight) steerInput += 1;
+  let steerInput = keys.left - keys.right;
   
   // Smooth steering
   steerAngle += (steerInput * maxSteer - steerAngle) * 8 * dt;
@@ -674,7 +639,7 @@ function animate(now){
   speed += (targetSpeed - speed) * 0.6 * dt;
   speed = Math.max(20, speed);
   
-  // Distance and lap tracking - only if game started
+  // Distance and lap tracking
   if(gameStarted){
     distance += speed * dt * 2.8;
     currentLapTime += dt;
@@ -690,11 +655,9 @@ function animate(now){
   const pos = trackPosition(distance);
   playerCar.position.lerp(new THREE.Vector3(pos.x + playerX, pos.y + 0.5, pos.z), 0.85);
   playerCar.rotation.y = -Math.atan2(playerX, 10) * 0.6 + Math.atan2(steerAngle, 1) * 0.3;
-  
-  // Tilt car based on steer
   playerCar.rotation.z = steerAngle * 0.2;
   
-  // Update opponents (only in competitive mode)
+  // Update opponents
   if(gameMode === 'competitive'){
     opponents.forEach((opp, idx) => {
       opp.progress += opp.speed * dt * 2.8;
@@ -705,7 +668,7 @@ function animate(now){
     });
   }
   
-  // Advanced camera following
+  // Camera following
   const desiredPos = new THREE.Vector3().copy(playerCar.position).add(
     new THREE.Vector3(0, 8, -16).applyQuaternion(playerCar.quaternion)
   );
@@ -718,18 +681,15 @@ function animate(now){
   const rpm = Math.round((speed / 75) * 8000);
   gear = Math.floor((speed / 75) * 5) < 1 ? 'N' : String(Math.floor((speed / 75) * 5));
   
-  // Update status based on game mode
-  let statusText = `LAP: ${lap} / ${maxLaps}   SPEED: ${Math.round(speed * 1.8)} KPH   RPM: ${rpm}`;
+  // Update status
+  let statusText = `LAP: ${lap} / 5   SPEED: ${Math.round(speed * 1.8)} KPH`;
   if(gameMode === 'time-trial'){
-    statusText = `TIME: ${Math.floor(currentLapTime)}s   SPEED: ${Math.round(speed * 1.8)} KPH   RPM: ${rpm}`;
+    statusText = `TIME: ${Math.floor(currentLapTime)}s   SPEED: ${Math.round(speed * 1.8)} KPH`;
     maxLaps = 1;
-  } else if(gameMode === 'solo'){
-    statusText = `LAP: ${lap} / 5   SPEED: ${Math.round(speed * 1.8)} KPH   RPM: ${rpm}`;
-    maxLaps = 5;
   }
   
   status.textContent = statusText;
-  hud.textContent = `FUEL: ${Math.max(0, Math.round(100 - distance * 0.003))}%   DAMAGE: ${Math.round(damage)}%   GEAR: ${gear}`;
+  hud.textContent = `FUEL: ${Math.max(0, Math.round(100 - distance * 0.003))}%   GEAR: ${gear}`;
   
   if(gameStarted && lap >= maxLaps){
     finishEl.style.display = 'block';
@@ -738,15 +698,12 @@ function animate(now){
   }
   
   updateMiniMap();
-  
-  // Render with post-processing
   composer.render();
   
   requestAnimationFrame(animate);
 }
 
 requestAnimationFrame(animate);
-
 </script>
 </body>
 </html>
